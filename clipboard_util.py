@@ -87,8 +87,17 @@ def focus_and_paste(
     open_url: str = None,
     delay_after_open: float = 3.0,
     delay_after_focus: float = 0.3,
+    dry_run: bool = False,
 ):
     copy_image_to_clipboard(image_path)
+    if dry_run:
+        # 在干跑模式下仅复制到剪贴板并返回将要粘贴的目标信息，便于调试
+        hwnd = find_window_by_title_hint(title_hint)
+        if hwnd:
+            return True, f'dry-run: copied to clipboard, target hwnd={hwnd}'
+        else:
+            return True, f'dry-run: copied to clipboard, target hint="{title_hint or ''}" (not found; would fallback to browser)'
+
     if open_url:
         webbrowser.open_new(open_url)
         time.sleep(delay_after_open)
@@ -97,7 +106,15 @@ def focus_and_paste(
         return False, 'target window not found'
     ok = focus_window(hwnd)
     if not ok:
-        return False, 'cannot focus window'
+        # retry a few times: re-find the window and try again
+        for _ in range(5):
+            time.sleep(0.3)
+            hwnd = find_window_by_title_hint(title_hint, timeout=0.5)
+            if hwnd and focus_window(hwnd):
+                ok = True
+                break
+        if not ok:
+            return False, 'cannot focus window'
     time.sleep(delay_after_focus)
     pyautogui.hotkey('ctrl', 'v')
     time.sleep(0.1)

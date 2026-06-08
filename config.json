@@ -1,5 +1,5 @@
 {
-  "url": "https://www.doubao.com",
+  "url": "https://chatglm.cn/main/alltoolsdetail?redirect=/main/alltoolsdetail&lang=zh",
   "paste_mode": true,
   "source_window_title": "智慧树",
   "target_window_title": "豆包",
@@ -10,5 +10,6 @@
   "screenshot_region": null,
   "delay_after_open": 3.0,
   "delay_after_return": 0.3,
-  "delay_after_next_click": 0.3
+  "delay_after_next_click": 0.3,
+  "reuse_url_on_loop": true
 }

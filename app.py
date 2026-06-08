@@ -72,6 +72,9 @@ class PasteApp:
         self.entry_interval.insert(0, '10')
         self.entry_interval.grid(row=8, column=1, sticky=tk.W)
 
+        self.reuse_url_var = tk.BooleanVar(value=True)
+        tk.Checkbutton(frm, text='循环时只打开一次网址并复用窗口', variable=self.reuse_url_var).grid(row=8, column=1, sticky=tk.E)
+
         btn_frm = tk.Frame(frm)
         btn_frm.grid(row=9, column=0, columnspan=2, pady=(8, 0))
         self.start_btn = tk.Button(btn_frm, text='Start', width=12, command=self.start)
@@ -129,6 +132,8 @@ class PasteApp:
                 else:
                     self.use_region_var.set(False)
                 self.press_enter_var.set(cfg.get('press_enter_after_paste', False))
+                # reuse url on loop
+                self.reuse_url_var.set(cfg.get('reuse_url_on_loop', True))
             except Exception:
                 pass
 
@@ -173,6 +178,7 @@ class PasteApp:
         cfg['press_enter_after_paste'] = bool(self.press_enter_var.get())
         cfg['screenshot_region'] = self._read_region()
         cfg['paste_mode'] = True
+        cfg['reuse_url_on_loop'] = bool(self.reuse_url_var.get())
         with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
             json.dump(cfg, f, ensure_ascii=False, indent=2)
 
@@ -206,6 +212,9 @@ class PasteApp:
         try:
             self.append_log('启动: ' + ' '.join(args))
             # start subprocess and capture stdout/stderr
+            # pass reuse-url flag when GUI checkbox enabled
+            if self.reuse_url_var.get():
+                args.append('--reuse-url')
             self.proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         except Exception as e:
             messagebox.showerror('错误', f'启动失败: {e}')
