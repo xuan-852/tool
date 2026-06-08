@@ -1,0 +1,14 @@
+{
+  "url": "https://www.doubao.com",
+  "paste_mode": true,
+  "source_window_title": "智慧树",
+  "target_window_title": "豆包",
+  "next_question_click": null,
+  "press_enter_after_paste": false,
+  "use_ocr": false,
+  "tesseract_path": "C:/Program Files/Tesseract-OCR/tesseract.exe",
+  "screenshot_region": null,
+  "delay_after_open": 3.0,
+  "delay_after_return": 0.3,
+  "delay_after_next_click": 0.3
+}
