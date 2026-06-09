@@ -6,10 +6,12 @@ import threading
 import time
 import tkinter as tk
 from tkinter import messagebox
+from pathlib import Path
 
 
-CONFIG_PATH = 'config.json'
-SCRIPT = 'paste_run.py'
+BASE_DIR = Path(__file__).resolve().parent.parent
+CONFIG_PATH = str(BASE_DIR / 'config.json')
+SCRIPT = str(BASE_DIR / 'code' / 'paste_run.py')
 
 
 class PasteApp:
@@ -75,16 +77,24 @@ class PasteApp:
         self.reuse_url_var = tk.BooleanVar(value=True)
         tk.Checkbutton(frm, text='循环时只打开一次网址并复用窗口', variable=self.reuse_url_var).grid(row=8, column=1, sticky=tk.E)
 
+        self.batch_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(frm, text='批量模式（先截图完再统一上传）', variable=self.batch_var).grid(row=9, column=1, sticky=tk.W)
+
+        tk.Label(frm, text='运行次数（0=无限）：').grid(row=10, column=0, sticky=tk.W)
+        self.entry_count = tk.Entry(frm, width=10)
+        self.entry_count.insert(0, '0')
+        self.entry_count.grid(row=10, column=1, sticky=tk.W)
+
         btn_frm = tk.Frame(frm)
-        btn_frm.grid(row=9, column=0, columnspan=2, pady=(8, 0))
+        btn_frm.grid(row=11, column=0, columnspan=2, pady=(8, 0))
         self.start_btn = tk.Button(btn_frm, text='Start', width=12, command=self.start)
         self.start_btn.pack(side=tk.LEFT, padx=4)
         self.stop_btn = tk.Button(btn_frm, text='Stop', width=12, command=self.stop, state=tk.DISABLED)
         self.stop_btn.pack(side=tk.LEFT, padx=4)
 
-        tk.Label(frm, text='日志：').grid(row=10, column=0, sticky=tk.W, pady=(8, 0))
+        tk.Label(frm, text='日志：').grid(row=11, column=0, sticky=tk.W, pady=(8, 0))
         self.log = tk.Text(frm, height=12, width=72, state=tk.DISABLED)
-        self.log.grid(row=11, column=0, columnspan=2, pady=(0, 8))
+        self.log.grid(row=12, column=0, columnspan=2, pady=(0, 8))
 
         # load defaults from config
         self.load_config()
@@ -134,6 +144,9 @@ class PasteApp:
                 self.press_enter_var.set(cfg.get('press_enter_after_paste', False))
                 # reuse url on loop
                 self.reuse_url_var.set(cfg.get('reuse_url_on_loop', True))
+                self.batch_var.set(cfg.get('batch_mode', False))
+                self.entry_count.delete(0, tk.END)
+                self.entry_count.insert(0, str(cfg.get('loop_run_count', 0)))
             except Exception:
                 pass
 
@@ -174,11 +187,19 @@ class PasteApp:
             except Exception as exc:
                 raise ValueError('下一题坐标必须填写整数') from exc
         else:
-            cfg['next_question_click'] = None
+            # 如果输入框为空，保留 config 中已有的坐标（可能是相对坐标）
+            cfg.setdefault('next_question_click', None)
         cfg['press_enter_after_paste'] = bool(self.press_enter_var.get())
         cfg['screenshot_region'] = self._read_region()
         cfg['paste_mode'] = True
         cfg['reuse_url_on_loop'] = bool(self.reuse_url_var.get())
+        cfg['batch_mode'] = bool(self.batch_var.get())
+        try:
+            cfg['loop_run_count'] = int(self.entry_count.get().strip() or '0')
+            if cfg['loop_run_count'] < 0:
+                raise ValueError
+        except Exception as exc:
+            raise ValueError('运行次数必须是 0 或正整数') from exc
         with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
             json.dump(cfg, f, ensure_ascii=False, indent=2)
 
@@ -196,6 +217,21 @@ class PasteApp:
             messagebox.showerror('错误', '间隔必须为正整数')
             return
 
+        count_text = self.entry_count.get().strip()
+        try:
+            count = int(count_text or '0')
+            if count < 0:
+                raise ValueError
+        except Exception:
+            messagebox.showerror('错误', '运行次数必须是 0 或正整数')
+            return
+
+        # If the user entered a run count, treat it as loop mode automatically.
+        if count > 0 and mode == 'once':
+            mode = 'loop'
+            self.mode_var.set('loop')
+            self.append_log(f'检测到运行次数={count}，已自动切换为循环模式')
+
         try:
             # save config
             self.save_config()
@@ -209,12 +245,17 @@ class PasteApp:
         else:
             args.extend(['--loop', '--interval', str(ival)])
 
+        if mode == 'loop' and count > 0:
+            args.extend(['--count', str(count)])
+
         try:
-            self.append_log('启动: ' + ' '.join(args))
-            # start subprocess and capture stdout/stderr
             # pass reuse-url flag when GUI checkbox enabled
             if self.reuse_url_var.get():
                 args.append('--reuse-url')
+            if self.batch_var.get():
+                args.append('--batch')
+            self.append_log('启动: ' + ' '.join(args))
+            # start subprocess and capture stdout/stderr
             self.proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         except Exception as e:
             messagebox.showerror('错误', f'启动失败: {e}')
@@ -227,7 +268,7 @@ class PasteApp:
         threading.Thread(target=self._read_stdout, daemon=True).start()
         threading.Thread(target=self._read_stderr, daemon=True).start()
 
-        if mode == 'once':
+        if mode == 'once' or (mode == 'loop' and count > 0):
             # for --once, wait and re-enable when done
             threading.Thread(target=self._wait_finish, daemon=True).start()
 

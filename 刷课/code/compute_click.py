@@ -2,9 +2,11 @@ import json
 from pathlib import Path
 from clipboard_util import find_window_by_title_hint, get_window_region
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+
 
 def main():
-    cfg = json.loads(Path('config.json').read_text(encoding='utf-8'))
+    cfg = json.loads((BASE_DIR / 'config.json').read_text(encoding='utf-8'))
     next_click = cfg.get('next_question_click')
     source_hwnd = None
     capture_region = None

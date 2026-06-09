@@ -7,7 +7,7 @@
     "rel_x": 0.42,
     "rel_y": 0.895
   },
-  "press_enter_after_paste": false,
+  "press_enter_after_paste": true,
   "use_ocr": false,
   "tesseract_path": "C:/Program Files/Tesseract-OCR/tesseract.exe",
   "screenshot_region": null,
@@ -15,5 +15,6 @@
   "delay_after_return": 0.3,
   "delay_after_next_click": 0.3,
   "reuse_url_on_loop": true,
-  "loop_run_count": 5
+  "loop_run_count": 5,
+  "batch_mode": true
 }

@@ -7,7 +7,8 @@ import win32gui
 
 from clipboard_util import find_window_by_title_hint, get_window_region
 
-CONFIG_PATH = 'config.json'
+BASE_DIR = Path(__file__).resolve().parent.parent
+CONFIG_PATH = str(BASE_DIR / 'config.json')
 
 
 def load_config():

@@ -1,0 +1,7 @@
+# Secret Guardian — 已全局安装，无需进仓库
+aip_defender/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
